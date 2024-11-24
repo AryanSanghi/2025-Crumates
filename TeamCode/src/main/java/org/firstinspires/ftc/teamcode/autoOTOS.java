@@ -39,6 +39,7 @@ import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -51,13 +52,13 @@ public class autoOTOS extends LinearOpMode {
     //  Set the GAIN constants to control the relationship between the measured position error, and how much power is
     //  applied to the drive motors to correct the error.
     //  Drive = Error * Gain    Make these values smaller for smoother control, or larger for a more aggressive response.
-    final double SPEED_GAIN  =  0.03;   // 0.02 Forward Speed Control "Gain". eg: Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double SPEED_GAIN  =  0.01;   // 0.02 Forward Speed Control "Gain". eg: Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
     final double STRAFE_GAIN =  0.15;   // 0.015 Strafe Speed Control "Gain".  eg: Ramp up to 25% power at a 25 degree Yaw error.   (0.25 / 25.0)
     final double TURN_GAIN   =  0.03;   // 0.01 Turn Control "Gain".  eg: Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
-    final double MAX_AUTO_SPEED = 0.2;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_STRAFE= 0.2;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_TURN  = 0.2;   //  Clip the turn speed to this max value (adjust for your robot)
+    final double MAX_AUTO_SPEED = 0.6;   //  Clip the approach speed to this max value (adjust for your robot)
+    final double MAX_AUTO_STRAFE= 0.6;   //  Clip the approach speed to this max value (adjust for your robot)
+    final double MAX_AUTO_TURN  = 0.6   ;   //  Clip the turn speed to this max value (adjust for your robot)
 
     private ElapsedTime runtime = new ElapsedTime();
     
@@ -68,6 +69,7 @@ public class autoOTOS extends LinearOpMode {
     private DcMotor rightBackDrive = null;
     private DcMotor drawer = null;
     private DcMotor speciman = null;
+    private SpecimenClaw claw = null;
 
     // Calculate the COUNTS_PER_INCH for your specific drive train.
     // Go to your motor vendor website to determine your motor's COUNTS_PER_MOTOR_REV
@@ -75,7 +77,7 @@ public class autoOTOS extends LinearOpMode {
     // For example, use a value of 2.0 for a 12-tooth spur gear driving a 24-tooth spur gear.
     // This is gearing DOWN for less speed and more torque.
     // For gearing UP, use a gear ratio less than 1.0. Note this will affect the direction of wheel rotation.
-    static final double     COUNTS_PER_MOTOR_REV    = 384.5 * 4;
+    static final double     COUNTS_PER_MOTOR_REV    = 384.5 * 10.5 / 9.5;
     // ^ GoBILDA 5203 Series Yellow Jacket Planetary Gear Motor specs, check store page for motor to find number, CPR is PPR * 4
     static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // No External Gearing.
     static final double     WHEEL_DIAMETER_INCHES   = 1.5 ;     // use ruler to measure diameter of whatever wheel
@@ -92,7 +94,7 @@ public class autoOTOS extends LinearOpMode {
     SparkFunOTOS.Pose2D pos;
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException {
 
         String LEFT_FRONT_DRIVE_NAME = "leftFrontDrive";
         String RIGHT_FRONT_DRIVE_NAME = "rightFrontDrive";
@@ -108,6 +110,7 @@ public class autoOTOS extends LinearOpMode {
         rightBackDrive = hardwareMap.dcMotor.get(RIGHT_REAR_DRIVE_NAME);
         drawer = hardwareMap.dcMotor.get(DRAWER_NAME);
         speciman = hardwareMap.dcMotor.get(SPECIMAN_NAME);
+        claw = new SpecimenClaw(hardwareMap);
 
         //setting directions, on current robot any axle pointing left is reversed, pointing right is forward
         leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -115,7 +118,7 @@ public class autoOTOS extends LinearOpMode {
         rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
         drawer.setDirection(DcMotor.Direction.REVERSE);
-        speciman.setDirection(DcMotor.Direction.FORWARD);
+        speciman.setDirection(DcMotor.Direction.REVERSE);
 
         drawer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         speciman.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -142,15 +145,34 @@ public class autoOTOS extends LinearOpMode {
         telemetry.addData("Status", "Running");
         telemetry.update();
 
-        /*
+/*
         while(opModeIsActive()){
             pos = myOtos.getPosition();
             telemetry.addData("Cords:", "X %5.2f, Y %5.2f, Rotation %5.2f", pos.x, pos.y, pos.h);
             telemetry.update();
         }
+ */
+        //drawerArm(0.5, 15, 5);
+        claw.setClawJoint(0.3146);
+        claw.grabSpecimen();
+        specimanArm(0.84, 16, 5, 0.27);
+        otosDrive(0, 25, 0, 100, 0.1);
+        claw.setClawJoint(0.2);
+        specimanArm(0.84, -6, 3, -0.3);
+        try {
+            Thread.sleep(2000);
+        } catch (Exception e){
+            telemetry.addData("SHITTTTTTTTTT", "");
+            telemetry.update();
+        }
+        claw.releaseSpecimen();
+        //otosDrive(40, 0, 180, 100, 0.25);
+        /*
+        while (opModeIsActive()) {
+            speciman.setPower(0.27);
+        }
          */
-        drawerArm(0.5, 15, 5);
-        otosDrive(0,48, 0, 1000, 0.2);
+        //otosDrive(0,48, 0, 1000, 0.2);
         /*
         otosDrive(2, 2, 0, 2);      // small moveforward and right away from wall
         otosDrive(18, 2, 0, 2);     // forward and push sample into net zone
@@ -422,7 +444,7 @@ public class autoOTOS extends LinearOpMode {
             while (opModeIsActive() && (runtime.seconds() < timeoutS) && drawer.isBusy()) {
 
                 // Display it for the driver.
-                telemetry.addData("Running to",  " %7d :%7d", target);
+                telemetry.addData("Running to",  " %7d", target);
                 telemetry.addData("Currently at",  " at %7d :%7d",
                         drawer.getCurrentPosition(), drawer.getCurrentPosition());
                 telemetry.update();
@@ -464,7 +486,7 @@ public class autoOTOS extends LinearOpMode {
             while (opModeIsActive() && (runtime.seconds() < timeoutS) && speciman.isBusy()) {
 
                 // Display it for the driver.
-                telemetry.addData("Running to",  " %7d :%7d", target);
+                telemetry.addData("Running to",  " %7d", target);
                 telemetry.addData("Currently at",  " at %7d :%7d",
                         speciman.getCurrentPosition(), speciman.getCurrentPosition());
                 telemetry.update();
@@ -476,7 +498,7 @@ public class autoOTOS extends LinearOpMode {
             // Turn off RUN_TO_POSITION
             speciman.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-            sleep(10);   // optional pause after each move.
+            //sleep(10);   // optional pause after each move.
         }
     }
 }
