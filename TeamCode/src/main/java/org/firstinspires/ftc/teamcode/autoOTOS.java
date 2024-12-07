@@ -46,19 +46,21 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.concurrent.TimeUnit;
+
 @Autonomous(name="Final Auto", group="auto")
 //@Disabled
 public class autoOTOS extends LinearOpMode {
     //  Set the GAIN constants to control the relationship between the measured position error, and how much power is
     //  applied to the drive motors to correct the error.
     //  Drive = Error * Gain    Make these values smaller for smoother control, or larger for a more aggressive response.
-    final double SPEED_GAIN  =  0.01;   // 0.02 Forward Speed Control "Gain". eg: Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
-    final double STRAFE_GAIN =  0.15;   // 0.015 Strafe Speed Control "Gain".  eg: Ramp up to 25% power at a 25 degree Yaw error.   (0.25 / 25.0)
+    double SPEED_GAIN  =  0.25;   // 0.02 Forward Speed Control "Gain". eg: Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    double STRAFE_GAIN =  0.175;   // 0.015 Strafe Speed Control "Gain".  eg: Ramp up to 25% power at a 25 degree Yaw error.   (0.25 / 25.0)
     final double TURN_GAIN   =  0.03;   // 0.01 Turn Control "Gain".  eg: Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
-    final double MAX_AUTO_SPEED = 0.6;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_STRAFE= 0.6;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_TURN  = 0.6   ;   //  Clip the turn speed to this max value (adjust for your robot)
+    final double MAX_AUTO_SPEED = 0.4;   //  Clip the approach speed to this max value (adjust for your robot)
+    final double MAX_AUTO_STRAFE= 0.4;   //  Clip the approach speed to this max value (adjust for your robot)
+    final double MAX_AUTO_TURN  = 0.4   ;   //  Clip the turn speed to this max value (adjust for your robot)
 
     private ElapsedTime runtime = new ElapsedTime();
     
@@ -70,6 +72,7 @@ public class autoOTOS extends LinearOpMode {
     private DcMotor drawer = null;
     private DcMotor speciman = null;
     private SpecimenClaw claw = null;
+    private Claw fisher = null;
 
     // Calculate the COUNTS_PER_INCH for your specific drive train.
     // Go to your motor vendor website to determine your motor's COUNTS_PER_MOTOR_REV
@@ -83,10 +86,11 @@ public class autoOTOS extends LinearOpMode {
     static final double     WHEEL_DIAMETER_INCHES   = 1.5 ;     // use ruler to measure diameter of whatever wheel
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
             (WHEEL_DIAMETER_INCHES * Math.PI);
-    static final double     SPECIMAN_SPEED             = 0.6; // max power for speciman arm
-    static final double     DRAWER_SPEED             = 0.6; // max power for drawer arm
+    static final double     SPECIMAN_SPEED             = 0.35; // max power for speciman arm
+    static final double     DRAWER_SPEED             = 0.35; // max power for drawer arm
 
-    public static double Linear_Scaler = 20.281/21 * 48.3115/56.0;
+    //public static double Linear_Scaler = 20.281/21 * 48.3115/56.0 * 27.5/23.36;
+    public static double Linear_Scaler = 0.98082701825;
     public static double Angular_Scaler = 1.000;
     
     // Sensors
@@ -111,6 +115,7 @@ public class autoOTOS extends LinearOpMode {
         drawer = hardwareMap.dcMotor.get(DRAWER_NAME);
         speciman = hardwareMap.dcMotor.get(SPECIMAN_NAME);
         claw = new SpecimenClaw(hardwareMap);
+        fisher = new Claw(hardwareMap);
 
         //setting directions, on current robot any axle pointing left is reversed, pointing right is forward
         leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -145,28 +150,205 @@ public class autoOTOS extends LinearOpMode {
         telemetry.addData("Status", "Running");
         telemetry.update();
 
-/*
+        /*
         while(opModeIsActive()){
             pos = myOtos.getPosition();
             telemetry.addData("Cords:", "X %5.2f, Y %5.2f, Rotation %5.2f", pos.x, pos.y, pos.h);
             telemetry.update();
         }
- */
+        */
+
         //drawerArm(0.5, 15, 5);
         claw.setClawJoint(0.3146);
         claw.grabSpecimen();
-        specimanArm(0.84, 16, 5, 0.27);
-        otosDrive(0, 25, 0, 100, 0.1);
-        claw.setClawJoint(0.2);
-        specimanArm(0.84, -6, 3, -0.3);
-        try {
-            Thread.sleep(2000);
-        } catch (Exception e){
-            telemetry.addData("SHITTTTTTTTTT", "");
+        otosDrive(23, 5, 4, 2);
+        otosRotate(-45, 4, 4);
+
+        fisher.setClawPosition(0);
+        drawerArm(0.84, 4, 2);
+        fisher.setClawPosition(0.8);
+        fisher.setJointPosition(0.26);
+        sleep(500); // deposit preload
+        //reportPos();
+        otosRotate(35, 2.5, 4);
+        sleep(500);
+        otosForward(10, 5, 1.5);
+        drawerArm(0.84, 8, 3.5);//claw around 1st ground sample
+        drawerArm(0.84, -2, 1.5);
+        fisher.setJointPosition(0);
+        sleep(400);
+        fisher.setClawPosition(0);
+        drawerArm(0.84, -12, 3);
+        drawer.setPower(-0.2);
+        fisher.setJointPosition(0.26);
+        SPEED_GAIN /= 1.5;
+        otosForward(1.5, 2.5, 1.5);
+        otosRotate(-35, 3, 4);
+        fisher.setClawPosition(0.4);
+        sleep(500);
+
+        otosRotate(35, 2.5, 4);
+        sleep(500);
+        otosForward(7.5, 5, 1.5);
+        otosRotate(22.5, 3, 4);
+        fisher.setClawPosition(0.8);
+        drawerArm(0.84, 14, 3.5);//claw around 2nd ground sample
+        fisher.setJointPosition(0);
+        sleep(400);
+        fisher.setClawPosition(0);
+        drawerArm(0.84, -16, 3);
+        drawer.setPower(-0.2);
+        fisher.setJointPosition(0.26);
+        otosRotate(-22.5, 2.5, 4);
+        otosForward(2.5, 1.5, 1.5);
+        otosRotate(-35, 2.5, 4);
+        //otosRotate(-35, 3, 4);
+        fisher.setClawPosition(0.4);
+        sleep(500);
+        //reportPos();
+
+        otosRotate(37, 2.5, 4);
+        otosForward(7.5, 4, 1.5);
+        otosRotate(45, 2.5, 4);
+        drawerArm(1, 4, 2);
+        fisher.setJointPosition(0.26);
+        fisher.setClawPosition(0.8);
+        drawerArm(1, 11.25, 3.5);//claw around 2nd ground sample
+        fisher.setJointPosition(0);
+        sleep(350);
+        drawerArm(1, -4, 1);
+        fisher.setClawPosition(0);
+        drawerArm(1, -11.25, 3.5);
+        fisher.setJointPosition(0.26);
+        //sleep(20000);
+        otosRotate(-58, 4, 4);
+        otosForward(4.5, 2, 1.5);
+        otosRotate(-15, 2, 4);
+
+        /*
+        auto without threads
+
+        claw.grabSpecimen();
+        otosDrive(23, 5, 4, 2);
+        otosRotate(-45, 4, 4);
+
+        fisher.setClawPosition(0);
+        drawerArm(0.84, 4, 2);
+        fisher.setClawPosition(0.8);
+        fisher.setJointPosition(0.26);
+        sleep(500); // deposit preload
+        //reportPos();
+        otosRotate(35, 2.5, 4);
+        sleep(500);
+        otosForward(10, 5, 1.5);
+        drawerArm(0.84, 8, 3.5);//claw around 1st ground sample
+        drawerArm(0.84, -2, 1.5);
+        fisher.setJointPosition(0);
+        sleep(400);
+        fisher.setClawPosition(0);
+        drawerArm(0.84, -12, 3);
+        drawer.setPower(-0.2);
+        fisher.setJointPosition(0.26);
+        SPEED_GAIN /= 1.5;
+        otosForward(1.5, 2.5, 1.5);
+        otosRotate(-35, 3, 4);
+        fisher.setClawPosition(0.4);
+        sleep(500);
+
+        otosRotate(35, 2.5, 4);
+        sleep(500);
+        otosForward(7.5, 5, 1.5);
+        otosRotate(22.5, 3, 4);
+        fisher.setClawPosition(0.8);
+        drawerArm(0.84, 14, 3.5);//claw around 2nd ground sample
+        //drawerArm(0.84, -2, 1.5);
+        fisher.setJointPosition(0);
+        sleep(400);
+        fisher.setClawPosition(0);
+        drawerArm(0.84, -16, 3);
+        drawer.setPower(-0.2);
+        fisher.setJointPosition(0.26);
+        //SPEED_GAIN /= 1.5;
+        otosRotate(-22.5, 2.5, 4);
+        otosForward(2.5, 1.5, 1.5);
+        otosRotate(-35, 2.5, 4);
+        //otosRotate(-35, 3, 4);
+        fisher.setClawPosition(0.4);
+        sleep(500);
+        //reportPos();
+
+        otosRotate(37, 2.5, 4);
+        otosForward(7.5, 4, 1.5);
+        otosRotate(45, 2.5, 4);
+        drawerArm(1, 4, 2);
+        fisher.setJointPosition(0.26);
+        fisher.setClawPosition(0.8);
+        drawerArm(1, 11.25, 3.5);//claw around 2nd ground sample
+        //drawerArm(1, -1, 3.5);
+        //drawerArm(0.84, -2, 1.5);
+        fisher.setJointPosition(0);
+        sleep(350);
+        drawerArm(1, -4, 1);
+        fisher.setClawPosition(0);
+        drawerArm(1, -11.25, 3.5);
+        fisher.setJointPosition(0.26);
+        //sleep(20000);
+        otosRotate(-58, 4, 4);
+        otosForward(4.5, 2, 1.5);
+        otosRotate(-15, 2, 4);
+         */
+        //reportPos();
+        //otosDrive(4.83, 7.6, 3.5, 1.5);
+        //otosDrive(2, myPosition().y+1, 3.5, 1.5);
+        //otosForward(2, 3 ,1.5);
+        //specimanArm(0.84, 16, 5, 0.2);
+        //otosForward(15, 6, 2); // drive to bar
+        //otosDrive(15, 15, 6, 2);
+        //otosDrive(0, 0 ,6, 2);
+
+        //specimanArm(0.84, -16, 2.5, 0);
+        //claw.setClawJoint(0.2);
+        //speciman.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        //speciman.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        telemetry.clearAll();
+        //long x = runtime.time(TimeUnit.MILLISECONDS);
+        //speciman.setPower(-0.5);
+        //sleep(1600);
+        /*
+        while (2000 + x > runtime.time(TimeUnit.MILLISECONDS)) {
+            speciman.setPower(-0.4);
+            telemetry.addData("Motor Power: ", speciman.getPower());
             telemetry.update();
+            //specimanArm(0.84, -6, 3, -0.3);
         }
+         */
         claw.releaseSpecimen();
-        //otosDrive(40, 0, 180, 100, 0.25);
+
+        //x = runtime.time(TimeUnit.MILLISECONDS);
+        /*
+        while (2000 + x > runtime.time(TimeUnit.MILLISECONDS)) {
+
+            speciman.setPower(-0.4);
+            telemetry.addData("Motor Power: ", speciman.getPower());
+            telemetry.update();
+            //specimanArm(0.84, -6, 3, -0.3);
+        }
+         */
+        //moveRobot(0, -0.4, 0);
+        //sleep(1000);
+        //otosForward(15,3.5, 2); // drive back
+        //otosDrive(0, 15, -117.41, 100, 0.1);
+        //otosRotate(-180, 4, 4); // rotate
+        STRAFE_GAIN = 0.4;
+        SPEED_GAIN = 0.05;
+        speciman.setPower(0);
+        //sleep(50000);
+        //otosDrive(-39.41, 3.33, 5, 0.2);
+        //otosDrive(3.33, -39.41, 5, 0.2);
+        //otosDrive(40.7, 1.45, 6.5, 0.1);
+        //otosDrive(-40.7, 2.45, 100, 0.1); // drive to zone
+
+        //otosDrive(-40.94, 0.35, -177.41, 100, 0.1);
         /*
         while (opModeIsActive()) {
             speciman.setPower(0.27);
@@ -271,7 +453,7 @@ public class autoOTOS extends LinearOpMode {
      * Move robot to a designated X,Y position and heading (rotation)
      * set the maxTime to have the driving logic timeout after a number of seconds.
      */
-     void otosDrive(double targetX, double targetY, double targetHeading, double maxTime) {
+     void otosDrive(double targetX, double targetY, double maxTime, double error) {
         double drive, strafe, turn;
         double currentRange, targetRange, initialBearing, targetBearing, xError, yError, yawError;
         double opp, adj;
@@ -279,15 +461,15 @@ public class autoOTOS extends LinearOpMode {
         SparkFunOTOS.Pose2D currentPos = myPosition();
         xError = targetX-currentPos.x; 
         yError = targetY-currentPos.y;
-        yawError = targetHeading-currentPos.h;
+        yawError = 0;
         
         runtime.reset();
-                          
+
         while(opModeIsActive() && (runtime.milliseconds() < maxTime*1000) &&
-        ((Math.abs(xError) > 1.5) || (Math.abs(yError) > 1.5) || (Math.abs(yawError) > 4)) ) {
+        ((Math.abs(xError) > error) || (Math.abs(yError) > error) || (Math.abs(yawError) > 4)) ) {
         // Use the speed and turn "gains" to calculate how we want the robot to move.
             drive  = Range.clip(xError * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
-            strafe = Range.clip(yError * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
+            strafe = Range.clip(yError * -STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
             turn   = Range.clip(yawError * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN) ;
 
             telemetry.addData("Auto","Drive %5.2f, Strafe %5.2f, Turn %5.2f ", drive, strafe, turn);
@@ -297,20 +479,19 @@ public class autoOTOS extends LinearOpMode {
             telemetry.addData("current Heading angle", currentPos.h);
             telemetry.addData("target X coordinate", targetX);
             telemetry.addData("target Y coordinate", targetY);
-            telemetry.addData("target Heading angle", targetHeading);
             telemetry.addData("xError", xError);
             telemetry.addData("yError", yError);
             telemetry.addData("yawError", yawError);
             telemetry.update();
                 
             // Apply desired axes motions to the drivetrain.
-            moveRobot(drive, strafe, turn);
+            moveRobot(drive, -strafe, turn);
             
             // then recalc error
             currentPos = myPosition();
             xError = targetX-currentPos.x;  
             yError = targetY-currentPos.y;
-            yawError = targetHeading-currentPos.h;
+            yawError = 0;
         }
         moveRobot(0,0,0);
         currentPos = myPosition();
@@ -362,11 +543,112 @@ public class autoOTOS extends LinearOpMode {
 
             // then recalc error
             currentPos = myPosition();
-            xError = targetX-currentPos.x;
+            xError = -targetX-currentPos.x;
             yError = targetY-currentPos.y;
             yawError = targetHeading-currentPos.h;
         }
         moveRobot(0,0,0);
+        currentPos = myPosition();
+        telemetry.addData("current X coordinate", currentPos.x);
+        telemetry.addData("current Y coordinate", currentPos.y);
+        telemetry.addData("current Heading angle", currentPos.h);
+        telemetry.update();
+    }
+
+    void otosForward(double targetY, double maxTime, double error) {
+        double drive, strafe, turn;
+        double currentRange, targetRange, initialBearing, targetBearing, xError, yError, yawError;
+        double opp, adj;
+
+        double rotation = myPosition().h;
+        SparkFunOTOS.Pose2D currentPos = new SparkFunOTOS.Pose2D(myPosition().x, myPosition().y, 0);
+        yError = targetY-currentPos.y;
+        //yError = targetY-currentPos.y;
+        //yawError = targetHeading-currentPos.h;
+
+        runtime.reset();
+
+        while(opModeIsActive() && (runtime.milliseconds() < maxTime*1000) &&
+                (Math.abs(yError) > error)) {
+            // Use the speed and turn "gains" to calculate how we want the robot to move.
+            drive  = Range.clip(yError * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
+            //strafe = Range.clip(yError * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
+            //turn   = Range.clip(yawError * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN) ;
+
+            telemetry.addData("Auto","Drive %5.2f", drive);
+            // current x,y swapped due to 90 degree rotation
+            telemetry.addData("current X coordinate", currentPos.x);
+            telemetry.addData("current Y coordinate", currentPos.y);
+            telemetry.addData("current Heading angle", currentPos.h);
+            telemetry.addData("target X coordinate", targetY);
+            //telemetry.addData("target Y coordinate", targetY);
+            //telemetry.addData("target Heading angle", targetHeading);
+            telemetry.addData("xError", yError);
+            //telemetry.addData("yError", yError);
+            //telemetry.addData("yawError", yawError);
+            telemetry.update();
+
+            // Apply desired axes motions to the drivetrain.
+            moveRobot(0, drive,  0);
+
+            // then recalc error
+            currentPos = myPosition();
+            yError = targetY-currentPos.y;
+            //yError = targetY-currentPos.y;
+            //yawError = targetHeading-currentPos.h;
+        }
+        moveRobot(0,0,0);
+        currentPos = new SparkFunOTOS.Pose2D(myPosition().x, myPosition().y, rotation);
+        telemetry.addData("current X coordinate", currentPos.x);
+        telemetry.addData("current Y coordinate", currentPos.y);
+        telemetry.addData("current Heading angle", currentPos.h);
+        telemetry.update();
+    }
+
+    void otosRotate(double targetHeading, double maxTime, double error) {
+        double drive, strafe, turn;
+        double currentRange, targetRange, initialBearing, targetBearing, xError, yError, yawError;
+        double opp, adj;
+
+        SparkFunOTOS.Pose2D currentPos = myPosition();
+        //xError = targetX-currentPos.x;
+        //yError = targetY-currentPos.y;
+        yawError = targetHeading-currentPos.h;
+
+        runtime.reset();
+
+        while(opModeIsActive() && (runtime.milliseconds() < maxTime*1000) &&
+                (Math.abs(yawError) > error)) {
+            // Use the speed and turn "gains" to calculate how we want the robot to move.
+            //drive  = Range.clip(xError * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
+            //strafe = Range.clip(yError * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
+            turn   = Range.clip(yawError * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN) ;
+
+            telemetry.addData("Auto","Turn %5.2f ", turn);
+            // current x,y swapped due to 90 degree rotation
+            telemetry.addData("current X coordinate", currentPos.x);
+            telemetry.addData("current Y coordinate", currentPos.y);
+            telemetry.addData("current Heading angle", currentPos.h);
+            //telemetry.addData("target X coordinate", targetX);
+            //telemetry.addData("target Y coordinate", targetY);
+            telemetry.addData("target Heading angle", targetHeading);
+            //telemetry.addData("xError", xError);
+            //telemetry.addData("yError", yError);
+            telemetry.addData("yawError", yawError);
+            telemetry.update();
+
+            // Apply desired axes motions to the drivetrain.
+            moveRobot(0, 0, turn);
+
+            // then recalc error
+            currentPos = myPosition();
+            //xError = targetX-currentPos.x;
+            //yError = targetY-currentPos.y;
+            yawError = targetHeading-currentPos.h;
+        }
+        moveRobot(0,0,0);
+        myOtos.setPosition(new SparkFunOTOS.Pose2D(myPosition().x, myPosition().y, yawError));
+        myOtos.setOffset(new SparkFunOTOS.Pose2D(0, 0, currentPos.h));
         currentPos = myPosition();
         telemetry.addData("current X coordinate", currentPos.x);
         telemetry.addData("current Y coordinate", currentPos.y);
@@ -388,8 +670,8 @@ public class autoOTOS extends LinearOpMode {
      * Positive Y is strafe right
      * Positive Yaw is clockwise: note this is not how the IMU reports yaw(heading)
      */
+     /*
      void moveRobot(double y, double x, double yaw) {
-        
         // Calculate wheel powers.
         double leftFrontPower    =  x +y +yaw;
         double rightFrontPower   =  x -y -yaw;
@@ -415,6 +697,33 @@ public class autoOTOS extends LinearOpMode {
         rightBackDrive.setPower(rightBackPower);
         //screw with the pause timing to see what happens
         sleep(10);
+    }
+      */
+
+    void moveRobot(double x, double y, double turn){ //right, forward, turn
+
+        double r = Math.hypot(x, y);
+        double robotAngle = Math.atan2(y, x) - Math.PI / 4;
+        double rightX = turn;
+
+        double leftFrontWheelPower = r * Math.cos(robotAngle) * Math.sqrt(2) + turn;
+        double rightFrontWheelPower = r * Math.sin(robotAngle) * Math.sqrt(2) - turn;
+        double leftRearWheelPower = r * Math.sin(robotAngle) * Math.sqrt(2) + turn;
+        double rightRearWheelPower = r * Math.cos(robotAngle) * Math.sqrt(2) - turn;
+
+        leftFrontDrive.setPower(leftFrontWheelPower);
+        rightFrontDrive.setPower(rightFrontWheelPower);
+        leftBackDrive.setPower(leftRearWheelPower);
+        rightBackDrive.setPower(rightRearWheelPower);
+
+
+        if (false) {
+            telemetry.addData("leftFront", "%.2f", leftFrontWheelPower);
+            telemetry.addData("rightFront", "%.2f", rightFrontWheelPower);
+            telemetry.addData("leftRear", "%.2f", leftRearWheelPower);
+            telemetry.addData("rightRear", "%.2f", rightRearWheelPower);
+            telemetry.addData("desiredAxis", "%.2f", rightX);
+        }
     }
 
     //arm extension modelled of off "RobotAutoDriveByEncoder_Linear"'s encoder drive function
@@ -499,6 +808,13 @@ public class autoOTOS extends LinearOpMode {
             speciman.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
             //sleep(10);   // optional pause after each move.
+        }
+    }
+    void reportPos(){
+        while(opModeIsActive()){
+            pos = myOtos.getPosition();
+            telemetry.addData("Cords:", "X %5.2f, Y %5.2f, Rotation %5.2f", pos.x, pos.y, pos.h);
+            telemetry.update();
         }
     }
 }

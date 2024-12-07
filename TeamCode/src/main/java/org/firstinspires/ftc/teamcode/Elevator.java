@@ -12,7 +12,7 @@ public class Elevator {
 
     private String ELEVATOR_MOTOR_NAME = "elevatorMotor";
 
-    private double ELEVATOR_MOTOR_POWER = 0.5;
+    private double ELEVATOR_MOTOR_POWER = 0.8;
 
     private DcMotor elevatorMotor = null;
     private Bucket bucket = null;
@@ -24,17 +24,11 @@ public class Elevator {
     }
 
     public void update(Gamepad gamepad) {
-        double power = 0;
-        if(gamepad.dpad_up){
-            ++power;
-        } else if (gamepad.dpad_down){
-            --power;
-        }
-        update(power);
+        update(gamepad.right_stick_y * 0.85);
         bucket.update(gamepad);
     }
 
     public void update(double power) {
-        elevatorMotor.setPower(ELEVATOR_MOTOR_POWER * power);
+        elevatorMotor.setPower(power);
     }
 }

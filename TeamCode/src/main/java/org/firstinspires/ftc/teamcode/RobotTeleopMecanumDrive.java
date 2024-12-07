@@ -27,7 +27,7 @@ public class RobotTeleopMecanumDrive extends OpMode{
         drive.setDebug(true);
 
         drawer = new Drawer(hardwareMap);
-        //elevator = new Elevator(hardwareMap);
+        elevator = new Elevator(hardwareMap);
         specimanArm = new SpecimanArm(hardwareMap);
 
         // Send telemetry message to signify robot waiting;
@@ -60,7 +60,7 @@ public class RobotTeleopMecanumDrive extends OpMode{
         drawer.update(gamepad2);
         specimanArm.update(gamepad2);
 
-        //elevator.update(gamepad2);
+        elevator.update(gamepad2);
         //testingValues(gamepad2);
     }
 

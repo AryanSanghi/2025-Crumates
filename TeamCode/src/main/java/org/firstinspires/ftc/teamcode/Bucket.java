@@ -21,13 +21,10 @@ public class Bucket {
     }
 
     public void update(Gamepad gamepad){
-        boolean y = gamepad.y && !yDown;
-        yDown = gamepad.y;
 
-        if(y && servoTriggered){
-            servo.setPosition(1);
-            servoTriggered = !servoTriggered;
-        } else if(y && !servoTriggered){
+        if(gamepad.dpad_up){
+            servo.setPosition(0.8);
+        } else if(gamepad.dpad_down){
             servo.setPosition(0);
             servoTriggered = !servoTriggered;
         }

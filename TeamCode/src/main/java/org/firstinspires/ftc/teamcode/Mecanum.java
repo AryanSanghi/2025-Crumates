@@ -86,6 +86,8 @@ public class Mecanum {
             driveSpeed = 0.4;
         } else if (gamepad.dpad_up){
             driveSpeed = 1;
+        } else if (gamepad.dpad_left){
+            driveSpeed = 0.25;
         }
     }
 
